@@ -11,7 +11,11 @@ import timm
 import numpy as np
 from num_sys_class import *
 from othermodels import resnet, vgg
-from models import poolformer
+from trainUtils import ADVModel
+from focalnet import clip_resnet50, baseline_resnet50, clip_focalnet_tiny, baseline_focalnet_tiny
+from id_cifar10_cifar100 import IdCIFAR10, IdCIFAR100
+from id_stl10 import IdSTL10
+
 '''
 Environment Variables
 '''
@@ -38,7 +42,18 @@ quantize_in = False
 # singlebitflip_in = False
 verbose_in = False
 debug_in = False
+CIFAR10_DEFAULT_MEAN = (0.49139968, 0.48215841, 0.44653091)
+CIFAR10_DEFAULT_STD = (0.24703223, 0.24348513, 0.26158784)
 
+CIFAR100_DEFAULT_MEAN = (0.50707516, 0.48654887, 0.44091784)
+CIFAR100_DEFAULT_STD = (0.26733429, 0.25643846, 0.27615047)
+
+FOOD101_DEFAULT_MEAN = (0.5507, 0.4451, 0.3405)
+FOOD101_DEFAULT_STD = (0.2282, 0.2395, 0.2373)
+
+
+STL10_DEFAULT_MEAN = (0.4469, 0.4400, 0.4068)
+STL10_DEFAULT_STD = (0.2184, 0.2157, 0.2182)
 
 # QUANTIZE_BITS = 8
 
@@ -238,6 +253,10 @@ def getNumClasses(dataset):
         return 100
     elif(dataset == 'IMAGENET'):
         return 1000
+    elif(dataset == 'FOOD101'):
+        return 101
+    elif(dataset == 'STL10'):
+        return 10
 
 
 def getNetwork(networkName, DATASET):
@@ -285,25 +304,162 @@ def getNetwork(networkName, DATASET):
             MODEL = resnet.resnet18(pretrained=True)
         elif networkName == "vgg19_bn":
             MODEL = vgg.vgg19_bn(pretrained=True)
-        # elif networkName == "cifar10_nn_baseline":
-        #     MODEL = cifar10_nn.baseline(pretrained=True, output_size=getNumClasses(DATASET))
-        # elif networkName == "cifar10_nn_v1":
-        #     MODEL = cifar10_nn.v1(pretrained=True, output_size=getNumClasses(DATASET))
-        # elif networkName == "cifar10_nn_v2":
-        #     MODEL = cifar10_nn.v2(pretrained=True, output_size=getNumClasses(DATASET))
-        elif networkName == "poolformer":
-            layers = [2, 2, 6, 2]
-            embed_dims = [64, 128, 320, 512]
-            mlp_ratios = [4, 4, 4, 4]
-            downsamples = [True, True, True, True]
-            num_classes = 10
+        elif networkName=="resnet50_elastic_True":
+            MODEL = ADVModel(backbone_type='resnet50',
+                             num_classes=getNumClasses(DATASET),
+                             pretrained=False)
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/goldeneye/src/othermodels/state_dicts/resnet50_elastic_True.pth')
+            MODEL.load_state_dict(ckpt['model'])
+        elif networkName=="resnet50_elastic_False":
+            MODEL = ADVModel(backbone_type='resnet50',
+                             num_classes=getNumClasses(DATASET),
+                             pretrained=False)
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/goldeneye/src/othermodels/state_dicts/resnet50_elastic_False.pth')
+            MODEL.load_state_dict(ckpt['model'])
+        elif networkName=="resnet18_elastic_True":
+            MODEL = ADVModel(backbone_type='resnet18',
+                             num_classes=getNumClasses(DATASET),
+                             pretrained=False)
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/goldeneye/src/othermodels/state_dicts/resnet18_elastic_True.pth')
+            MODEL.load_state_dict(ckpt['model'])
+        elif networkName=="resnet18_elastic_False":
+            MODEL = ADVModel(backbone_type='resnet18',
+                             num_classes=getNumClasses(DATASET),
+                             pretrained=False)
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/goldeneye/src/othermodels/state_dicts/resnet18_elastic_False.pth')
+            MODEL.load_state_dict(ckpt['model'])
+        elif networkName=="resnet18_gaussian_True":
+            MODEL = ADVModel(backbone_type='resnet18',
+                             num_classes=getNumClasses(DATASET),
+                             pretrained=False)
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/goldeneye/src/othermodels/state_dicts/resnet18_gaussian_True.pth')
+            MODEL.load_state_dict(ckpt['model'])
+        elif networkName=="resnet18_gaussian_False":
+            MODEL = ADVModel(backbone_type='resnet18',
+                             num_classes=getNumClasses(DATASET),
+                             pretrained=False)
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/goldeneye/src/othermodels/state_dicts/resnet18_gaussian_False.pth')
+            MODEL.load_state_dict(ckpt['model'])
+        elif networkName=="resnet50_gaussian_True":
+            MODEL = ADVModel(backbone_type='resnet50',
+                             num_classes=getNumClasses(DATASET),
+                             pretrained=False)
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/goldeneye/src/othermodels/state_dicts/resnet50_gaussian_True.pth')
+            MODEL.load_state_dict(ckpt['model'])
+        elif networkName=="resnet50_gaussian_False":
+            MODEL = ADVModel(backbone_type='resnet50',
+                             num_classes=getNumClasses(DATASET),
+                             pretrained=False)
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/goldeneye/src/othermodels/state_dicts/resnet50_gaussian_False.pth')
+            MODEL.load_state_dict(ckpt['model'])
 
-            model = poolformer.PoolFormer(
-                    layers, embed_dims=embed_dims, 
-                    mlp_ratios=mlp_ratios, downsamples=downsamples, 
-                    num_classes=num_classes)
-            model.load_state_dict(torch.load('/content/goldeneye/src/models/poolformer.pth'))
-            MODEL= model
+
+        elif networkName=="resnet50_saturate_True":
+            path='/share/data/drive_2/repos/Adversarial_Resilience/Robustness_and_Resilience/results/saturate/resnet50-lr-0.001-e-30-adv-True-cosine-mlr-1e-05-we-5-wlr-0.0001-pre-False-clip-False/resnet50_saturate_True.pth'
+            MODEL = ADVModel(backbone_type='resnet50',
+                             num_classes=getNumClasses(DATASET),
+                             pretrained=False)
+            ckpt = torch.load(path, map_location='cpu')
+            MODEL.load_state_dict(ckpt['model'])
+        elif networkName=="resnet50_saturate_False":
+            path='/share/data/drive_2/repos/Adversarial_Resilience/Robustness_and_Resilience/results/saturate/resnet50-lr-0.001-e-30-adv-False-cosine-mlr-1e-05-we-5-wlr-0.0001-pre-False-clip-False/resnet50_saturate_False.pth'
+            MODEL = ADVModel(backbone_type='resnet50',
+                             num_classes=getNumClasses(DATASET),
+                             pretrained=False)
+            ckpt = torch.load(path, map_location='cpu')
+            MODEL.load_state_dict(ckpt['model'])
+
+
+        elif networkName=="resnet18_saturate_False":
+            path='/share/data/drive_2/repos/Adversarial_Resilience/Robustness_and_Resilience/results/saturate/resnet18-lr-0.001-e-30-adv-False-cosine-mlr-1e-05-we-5-wlr-0.0001-pre-False-clip-False/resnet18_saturate_False.pth'
+            MODEL = ADVModel(backbone_type='resnet18',
+                             num_classes=getNumClasses(DATASET),
+                             pretrained=False)
+            ckpt = torch.load(path, map_location='cpu')
+            MODEL.load_state_dict(ckpt['model'])
+        
+        elif networkName=="resnet18_saturate_True":
+            path='/share/data/drive_2/repos/Adversarial_Resilience/Robustness_and_Resilience/results/saturate/resnet18-lr-0.001-e-30-adv-True-cosine-mlr-1e-05-we-5-wlr-0.0001-pre-False-clip-False/resnet18_saturate_True.pth'
+            MODEL = ADVModel(backbone_type='resnet18',
+                             num_classes=getNumClasses(DATASET),
+                             pretrained=False)
+            ckpt = torch.load(path, map_location='cpu')
+            MODEL.load_state_dict(ckpt['model'])
+
+
+        elif networkName=="baseline_resnet50":
+            MODEL=baseline_resnet50(num_classes=getNumClasses(DATASET))
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/checkpoints/resnet50/cifar100_baseline_resnet50.pth')
+            MODEL.load_state_dict(ckpt['model'])
+
+        elif networkName=="clip_resnet50":
+            MODEL=clip_resnet50(num_classes=getNumClasses(DATASET), 
+                                CLIP_text_path="/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/further_text_features/cifar100_gpt3.pth"
+                                )
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/checkpoints/resnet50/cifar100_clip_resnet50.pth')
+            MODEL.load_state_dict(ckpt['model'])
+        
+        elif networkName=='baseline_focalnet_tiny':
+            MODEL=baseline_focalnet_tiny(num_classes=getNumClasses(DATASET))
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/checkpoints/focalnet_tiny/cifar100_baseline_focalnet_tiny.pth')
+            MODEL.load_state_dict(ckpt['model'])
+
+        elif networkName=='clip_focalnet_tiny':
+            MODEL=clip_focalnet_tiny(num_classes=getNumClasses(DATASET), 
+                                CLIP_text_path="/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/further_text_features/cifar100_gpt3.pth"
+                                )
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/checkpoints/focalnet_tiny/cifar100_clip_focalnet_tiny.pth')
+            MODEL.load_state_dict(ckpt['model'])
+
+    elif DATASET == 'FOOD101':
+        if networkName=="baseline_resnet50":
+            MODEL=baseline_resnet50(num_classes=getNumClasses(DATASET))
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/checkpoints/resnet50/food101_baseline_resnet50.pth')
+            MODEL.load_state_dict(ckpt['model'])
+
+        elif networkName=="clip_resnet50":
+            MODEL=clip_resnet50(num_classes=getNumClasses(DATASET), 
+                                CLIP_text_path="/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/further_text_features/food101_gpt3.pth"
+                                )
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/checkpoints/resnet50/food101_clip_resnet50.pth')
+            MODEL.load_state_dict(ckpt['model'])
+
+        elif networkName=='baseline_focalnet_tiny':
+            MODEL=baseline_focalnet_tiny(num_classes=getNumClasses(DATASET))
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/checkpoints/focalnet_tiny/food101_baseline_focalnet_tiny.pth')
+            MODEL.load_state_dict(ckpt['model'])
+
+        elif networkName=='clip_focalnet_tiny':
+            MODEL=clip_focalnet_tiny(num_classes=getNumClasses(DATASET), 
+                                CLIP_text_path="/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/further_text_features/food101_gpt3.pth"
+                                )
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/checkpoints/focalnet_tiny/food101_clip_focalnet_tiny.pth')
+            MODEL.load_state_dict(ckpt['model'])
+
+    elif DATASET == 'STL10':
+        if networkName=="baseline_resnet50":
+            MODEL=baseline_resnet50(num_classes=getNumClasses(DATASET))
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/checkpoints/resnet50/stl10_baseline_resnet50.pth')
+            MODEL.load_state_dict(ckpt['model'])
+
+        elif networkName=="clip_resnet50":
+            MODEL=clip_resnet50(num_classes=getNumClasses(DATASET), 
+                                CLIP_text_path="/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/further_text_features/stl10_gpt3.pth"
+                                )
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/checkpoints/resnet50/stl10_clip_resnet50.pth')
+            MODEL.load_state_dict(ckpt['model'])
+        
+        elif networkName=='baseline_focalnet_tiny':
+            MODEL=baseline_focalnet_tiny(num_classes=getNumClasses(DATASET))
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/checkpoints/focalnet_tiny/stl10_baseline_focalnet_tiny.pth')
+            MODEL.load_state_dict(ckpt['model'])
+
+        elif networkName=='clip_focalnet_tiny':
+            MODEL=clip_focalnet_tiny(num_classes=getNumClasses(DATASET), 
+                                CLIP_text_path="/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/further_text_features/stl10_gpt3.pth"
+                                )
+            ckpt = torch.load('/share/data/drive_2/repos/Adversarial_Resilience/Focalnet_models/checkpoints/focalnet_tiny/stl10_clip_focalnet_tiny.pth')
+            MODEL.load_state_dict(ckpt['model'])
 
         # Error
         else:
@@ -319,45 +475,37 @@ def getNetwork(networkName, DATASET):
 
 def load_dataset(DATASET, BATCH_SIZE, workers=0, training=False, shuffleIn=False, include_id=True):
     if DATASET == 'CIFAR10':
-        mean=[0.49139968,0.48215841,0.44653091]              
-        std=[0.24703223,0.24348513,0.26158784]
-        transform = transforms.Compose(
-                [
-                  transforms.Resize(256),
-                  transforms.CenterCrop(224),
-                  transforms.ToTensor(), 
-                  transforms.Normalize(mean, std)
-                ]
-            )
+        transform = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(CIFAR10_DEFAULT_MEAN, CIFAR10_DEFAULT_STD),
+        ])
 
         if include_id:
-            testset = IdCifar10(root='./data', train=training, download=True, transform=transform)
+            # testset = IdCifar10(root='/share/data/drive_2/repos/datasets/CIFAR-10', train=training, download=True, transform=transform)
+            testset = IdCIFAR10(root='/share/data/drive_2/repos/datasets/CIFAR-10', train=training, download=True, transform=transform)
         else:
-            testset = datasets.CIFAR10(root='./data', train=training, download=True, transform=transform)
+            testset = datasets.CIFAR10(root='/share/data/drive_2/repos/datasets/CIFAR-10', train=training, download=True, transform=transform)
 
-        test_loader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE,
-                shuffle=shuffleIn, num_workers=workers, pin_memory=True)
+        test_loader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE, shuffle=shuffleIn, num_workers=workers, pin_memory=True)
         dataiter = iter(test_loader)
 
     elif DATASET == 'CIFAR100':
-        mean=[0.49139968,0.48215841,0.44653091]              
-        std=(0.24703223,0.24348513,0.26158784)
-        transform = transforms.Compose(
-                [
-                  transforms.Resize(256),
-                  transforms.CenterCrop(224),
-                  transforms.ToTensor(), 
-                  transforms.Normalize(mean, std)
-                ]
-            )
+        transform = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(CIFAR100_DEFAULT_MEAN, CIFAR100_DEFAULT_STD),
+        ])
 
         if include_id:
-            testset = IdCifar100(root='./data', train=training, download=True, transform=transform)
+            # testset = IdCifar100(root='/share/data/drive_2/repos/datasets/CIFAR-100', train=training, download=True, transform=transform)
+            testset = IdCIFAR100(root='/share/data/drive_2/repos/datasets/CIFAR-100', train=training, download=True, transform=transform)
         else:
-            testset = datasets.CIFAR100(root='./data', train=training, download=True, transform=transform)
+            testset = datasets.CIFAR100(root='/share/data/drive_2/repos/datasets/CIFAR-100', train=training, download=True, transform=transform)
 
-        test_loader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE,
-                shuffle=shuffleIn, num_workers=workers, pin_memory=True)
+        test_loader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE, shuffle=shuffleIn, num_workers=workers, pin_memory=True)
         dataiter = iter(test_loader)
 
     elif DATASET == 'IMAGENET':
@@ -380,6 +528,34 @@ def load_dataset(DATASET, BATCH_SIZE, workers=0, training=False, shuffleIn=False
         val_loader = torch.utils.data.DataLoader(images, batch_size=BATCH_SIZE,
                                                  shuffle=shuffleIn, num_workers=workers, pin_memory=True)
         dataiter = iter(val_loader)
+    elif DATASET == 'FOOD101':
+        transform = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(FOOD101_DEFAULT_MEAN, FOOD101_DEFAULT_STD),
+        ])
+        prefix = 'train' if training else 'test'
+        if include_id: images = IdFood101(root='/share/data/drive_2/repos/datasets/food101', split=prefix,download=True,transform=transform)
+        else: images = datasets.Food101(root='/share/data/drive_2/repos/datasets/food101', split=prefix,download=True,transform=transform)
+        test_loader= torch.utils.data.DataLoader(images, batch_size=BATCH_SIZE,
+                                                 shuffle=shuffleIn, num_workers=workers, pin_memory=True)
+        dataiter = iter(test_loader)
+    
+    elif DATASET == 'STL10':
+        transform = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(STL10_DEFAULT_MEAN, STL10_DEFAULT_MEAN),
+        ])
+        prefix = 'train' if training else 'test'
+        if include_id: images = IdSTL10(root='/share/data/drive_2/repos/datasets/stl10', split=prefix,download=True,transform=transform)
+        else: images = datasets.STL10(root='/share/data/drive_2/repos/datasets/stl10', split=prefix,download=True,transform=transform)
+        test_loader= torch.utils.data.DataLoader(images, batch_size=BATCH_SIZE,
+                                                 shuffle=shuffleIn, num_workers=workers, pin_memory=True)
+        dataiter = iter(test_loader)
+    
 
     return dataiter
 
@@ -399,34 +575,30 @@ def load_custom_dataset(NETWORK, DATASET, BATCH_SIZE, good_images, total_data,
     else:
         custom_sampler = get_custom_sampler_full(good_images)
 
+    
     if DATASET == 'CIFAR10':
-            mean=[0.49139968,0.48215841,0.44653091]              
-            std=[0.24703223,0.24348513,0.26158784]
-            transform = transforms.Compose(
-                  [
-                  transforms.Resize(256),
-                  transforms.CenterCrop(224),
-                  transforms.ToTensor(), 
-                  transforms.Normalize(mean, std)
-                ]
-            )
+            transform = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(CIFAR10_DEFAULT_MEAN, CIFAR10_DEFAULT_STD),
+        ])
 
-
-            testset = IdCifar10(root='./data', train=False,
+            testset = IdCIFAR10(root='/share/data/drive_2/repos/datasets/CIFAR-10', train=False,
                                                download=True, transform=transform)
             test_loader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE,
                                             sampler=custom_sampler, num_workers=workers, pin_memory=True)
             dataiter = iter(test_loader)
 
     if DATASET == 'CIFAR100':
-            transform = transforms.Compose(
-                    [
-                     transforms.ToTensor(),
-                     transforms.Normalize((0.4914,0.4822,0.4465), (0.2023,0.1994,0.2010))
-                    ]
-            )
+            transform = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(CIFAR100_DEFAULT_MEAN, CIFAR100_DEFAULT_STD),
+        ])
 
-            testset = IdCifar100(root='./data', train=False,
+            testset = IdCIFAR100(root='/share/data/drive_2/repos/datasets/CIFAR-100', train=False,
                                                download=True, transform=transform)
             test_loader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE,
                                             sampler=custom_sampler, num_workers=workers, pin_memory=True)
@@ -446,6 +618,34 @@ def load_custom_dataset(NETWORK, DATASET, BATCH_SIZE, good_images, total_data,
             val_loader = torch.utils.data.DataLoader(images, batch_size=BATCH_SIZE,
                     num_workers = workers, sampler=custom_sampler, pin_memory=True)
             dataiter = iter(val_loader)
+    if DATASET == 'FOOD101':
+            transform = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(FOOD101_DEFAULT_MEAN, FOOD101_DEFAULT_STD)
+            ])
+
+            # testset = IdFood101(root='./data', train=False, download=True, transform=transform)
+            testset = IdFood101(root='/share/data/drive_2/repos/datasets/food101', split='test', download=True, transform=transform)
+
+            test_loader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE,
+                                            sampler=custom_sampler, num_workers=workers, pin_memory=True)
+            dataiter = iter(test_loader)
+    if DATASET == 'STL10':
+            transform = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(FOOD101_DEFAULT_MEAN, FOOD101_DEFAULT_STD)
+            ])
+
+            testset = IdSTL10(root='/share/data/drive_2/repos/datasets/stl10', split='test', download=True, transform=transform)
+
+            test_loader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE,
+                                            sampler=custom_sampler, num_workers=workers, pin_memory=True)
+            dataiter = iter(test_loader)
+           
 
     return dataiter
 
@@ -520,6 +720,12 @@ class IdImageFolder(datasets.ImageFolder):
     def __getitem__(self, index):
         item = super(IdImageFolder, self).__getitem__(index)
         path = self.imgs[index][0]
+        return item[0], item[1], path, index
+    
+class IdFood101(datasets.Food101):
+    def __getitem__(self, index):
+        item = super(IdFood101, self).__getitem__(index)
+        path = str(self._image_files[index])
         return item[0], item[1], path, index
 
 class Custom_Sampler(torch.utils.data.Sampler):
