@@ -11,7 +11,7 @@ import timm
 import numpy as np
 from num_sys_class import *
 from othermodels import resnet, vgg
-
+from models import poolformer
 '''
 Environment Variables
 '''
@@ -285,12 +285,25 @@ def getNetwork(networkName, DATASET):
             MODEL = resnet.resnet18(pretrained=True)
         elif networkName == "vgg19_bn":
             MODEL = vgg.vgg19_bn(pretrained=True)
-        elif networkName == "cifar10_nn_baseline":
-            MODEL = cifar10_nn.baseline(pretrained=True, output_size=getNumClasses(DATASET))
-        elif networkName == "cifar10_nn_v1":
-            MODEL = cifar10_nn.v1(pretrained=True, output_size=getNumClasses(DATASET))
-        elif networkName == "cifar10_nn_v2":
-            MODEL = cifar10_nn.v2(pretrained=True, output_size=getNumClasses(DATASET))
+        # elif networkName == "cifar10_nn_baseline":
+        #     MODEL = cifar10_nn.baseline(pretrained=True, output_size=getNumClasses(DATASET))
+        # elif networkName == "cifar10_nn_v1":
+        #     MODEL = cifar10_nn.v1(pretrained=True, output_size=getNumClasses(DATASET))
+        # elif networkName == "cifar10_nn_v2":
+        #     MODEL = cifar10_nn.v2(pretrained=True, output_size=getNumClasses(DATASET))
+        elif networkName == "poolformer":
+            layers = [2, 2, 6, 2]
+            embed_dims = [64, 128, 320, 512]
+            mlp_ratios = [4, 4, 4, 4]
+            downsamples = [True, True, True, True]
+            num_classes = 10
+
+            model = poolformer.PoolFormer(
+                    layers, embed_dims=embed_dims, 
+                    mlp_ratios=mlp_ratios, downsamples=downsamples, 
+                    num_classes=num_classes)
+            model.load_state_dict(torch.load('/content/goldeneye/src/models/poolformer.pth'))
+            MODEL= model
 
         # Error
         else:
@@ -306,10 +319,14 @@ def getNetwork(networkName, DATASET):
 
 def load_dataset(DATASET, BATCH_SIZE, workers=0, training=False, shuffleIn=False, include_id=True):
     if DATASET == 'CIFAR10':
+        mean=[0.49139968,0.48215841,0.44653091]              
+        std=[0.24703223,0.24348513,0.26158784]
         transform = transforms.Compose(
                 [
-                    transforms.ToTensor(),
-                    transforms.Normalize((0.4914,0.4822,0.4465), (0.2023,0.1994,0.2010))
+                  transforms.Resize(256),
+                  transforms.CenterCrop(224),
+                  transforms.ToTensor(), 
+                  transforms.Normalize(mean, std)
                 ]
             )
 
@@ -323,12 +340,16 @@ def load_dataset(DATASET, BATCH_SIZE, workers=0, training=False, shuffleIn=False
         dataiter = iter(test_loader)
 
     elif DATASET == 'CIFAR100':
+        mean=[0.49139968,0.48215841,0.44653091]              
+        std=(0.24703223,0.24348513,0.26158784)
         transform = transforms.Compose(
                 [
-                    transforms.ToTensor(),
-                    transforms.Normalize((0.4914,0.4822,0.4465), (0.2023,0.1994,0.2010))
-                 ]
-                )
+                  transforms.Resize(256),
+                  transforms.CenterCrop(224),
+                  transforms.ToTensor(), 
+                  transforms.Normalize(mean, std)
+                ]
+            )
 
         if include_id:
             testset = IdCifar100(root='./data', train=training, download=True, transform=transform)
@@ -379,12 +400,17 @@ def load_custom_dataset(NETWORK, DATASET, BATCH_SIZE, good_images, total_data,
         custom_sampler = get_custom_sampler_full(good_images)
 
     if DATASET == 'CIFAR10':
+            mean=[0.49139968,0.48215841,0.44653091]              
+            std=[0.24703223,0.24348513,0.26158784]
             transform = transforms.Compose(
-                    [
-                     transforms.ToTensor(),
-                     transforms.Normalize((0.4914,0.4822,0.4465), (0.2023,0.1994,0.2010))
-                    ]
+                  [
+                  transforms.Resize(256),
+                  transforms.CenterCrop(224),
+                  transforms.ToTensor(), 
+                  transforms.Normalize(mean, std)
+                ]
             )
+
 
             testset = IdCifar10(root='./data', train=False,
                                                download=True, transform=transform)
