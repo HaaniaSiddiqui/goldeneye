@@ -125,8 +125,8 @@ if __name__ == '__main__':
         baseH = 224
         baseW = 224
     elif "CIFAR" in getDataset():
-        baseH = 32
-        baseW = 32
+        baseH = 224
+        baseW = 224
 
 
     goldeneye_model = goldeneye(
