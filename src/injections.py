@@ -121,8 +121,8 @@ if __name__ == "__main__":
         baseH = 224
         baseW = 224
     elif "CIFAR" in getDataset():
-        baseH = 32
-        baseW = 32
+        baseH = 224
+        baseW = 224
 
     exp_bits = getBitwidth() - getRadix() - 1  # also INT for fixed point
     mantissa_bits = getRadix()  # also FRAC for fixed point
