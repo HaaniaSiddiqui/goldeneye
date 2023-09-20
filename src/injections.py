@@ -130,7 +130,7 @@ if __name__ == "__main__":
         model,
         getBatchsize(),
         input_shape=[baseC, baseH, baseW],
-        layer_types=[nn.Conv2d, nn.Linear],
+        layer_types=[nn.Conv2d, nn.Linear, nn.AvgPool2d],
         use_cuda=getCUDA_en(),
 
         # number format
