@@ -149,9 +149,12 @@ if __name__ == "__main__":
 
         inj_order=getInjectionsLocation(),
     )
-
+    
     if getDebug():
+        print("\n----------------------MODEL SUMMARY---------------------------\n")
         print(goldeneye_model.print_pytorchfi_layer_summary())
+        print("\n----------------------MODEL SUMMARY---------------------------\n")
+
 
     assert goldeneye_model.get_total_layers() == total_layers
     shapes = goldeneye_model.get_output_size()
