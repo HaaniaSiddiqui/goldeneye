@@ -23,7 +23,7 @@ def gather_min_max_per_layer(model, data_iter, batch_size, precision="FP16", cud
     # register forward hook to the model
     handles = []
     for param in model.modules():
-        if isinstance(param, nn.Conv2d) or isinstance(param, nn.Linear):
+        if isinstance(param, nn.Conv2d) or isinstance(param, nn.Linear) or isinstance(param, nn.AvgPool2d):
             handles.append(param.register_forward_hook(save_activations))
 
     # main loops to gather ranges
