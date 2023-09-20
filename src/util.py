@@ -41,7 +41,7 @@ training_in = False
 quantize_in = False
 # singlebitflip_in = False
 verbose_in = False
-debug_in = False
+debug_in = True
 CIFAR10_DEFAULT_MEAN = (0.49139968, 0.48215841, 0.44653091)
 CIFAR10_DEFAULT_STD = (0.24703223, 0.24348513, 0.26158784)
 
